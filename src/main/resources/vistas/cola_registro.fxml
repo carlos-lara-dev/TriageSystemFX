@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<HBox spacing="16" styleClass="page-root"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="triagesystem.ColaRegistroController">
+    <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+
+    <!-- ===== PANEL IZQUIERDO: Formulario de registro ===== -->
+    <VBox spacing="10" styleClass="form-card" prefWidth="310" minWidth="300">
+        <padding><Insets top="16" right="16" bottom="16" left="16"/></padding>
+
+        <Label text="Registrar ingreso" styleClass="panel-title"/>
+        <Label text="Nuevo paciente en emergencias" styleClass="page-subtitle"/>
+
+        <VBox spacing="10">
+            <VBox spacing="3">
+                <Label text="Paciente:" styleClass="field-label"/>
+                <ComboBox fx:id="cbPaciente" maxWidth="Infinity" promptText="Buscar paciente"/>
+            </VBox>
+            <VBox spacing="3">
+                <Label text="Nivel de prioridad:" styleClass="field-label"/>
+                <ComboBox fx:id="cbPrioridad" maxWidth="Infinity" promptText="Seleccionar prioridad"/>
+            </VBox>
+            <VBox spacing="3">
+                <Label text="Estado inicial:" styleClass="field-label"/>
+                <ComboBox fx:id="cbEstado" maxWidth="Infinity" promptText="Estado inicial"/>
+            </VBox>
+            <VBox spacing="3">
+                <Label text="Médico (opcional):" styleClass="field-label"/>
+                <ComboBox fx:id="cbMedicoForm" maxWidth="Infinity" promptText="Sin asignar"/>
+            </VBox>
+            <VBox spacing="3">
+                <Label text="Síntomas:" styleClass="field-label"/>
+                <TextArea fx:id="txtSintomas" prefHeight="85" maxWidth="Infinity" wrapText="true"
+                          promptText="Describe los síntomas del paciente..."/>
+            </VBox>
+        </VBox>
+
+        <HBox spacing="8">
+            <Button text="✔  Registrar" styleClass="btn-primary" onAction="#handleRegistrar"/>
+            <Button text="Limpiar"       styleClass="btn-outline"  onAction="#handleLimpiar"/>
+        </HBox>
+
+        <Label fx:id="lblMensaje" wrapText="true" visible="false"/>
+    </VBox>
+
+    <!-- ===== PANEL DERECHO: Cola de atención ===== -->
+    <VBox spacing="12" HBox.hgrow="ALWAYS">
+
+        <Label text="Cola de atención" styleClass="page-title"/>
+        <Label text="Pacientes ordenados por prioridad y hora de ingreso" styleClass="page-subtitle"/>
+
+        <!-- Siguiente paciente -->
+        <HBox styleClass="next-panel" alignment="CENTER_LEFT" spacing="20">
+            <VBox spacing="4">
+                <Label text="Siguiente a atender" styleClass="next-label"/>
+                <Label fx:id="lblSiguiente" text="—" styleClass="next-value"/>
+            </VBox>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="✔  Atender siguiente" styleClass="btn-success"
+                    onAction="#handleAtenderSiguiente"/>
+        </HBox>
+
+        <!-- Tabla de cola -->
+        <VBox styleClass="table-card" VBox.vgrow="ALWAYS">
+            <HBox alignment="CENTER_LEFT" spacing="8" styleClass="table-card-header">
+                <Label fx:id="lblTotalCola" text="Cola (0 pacientes)" styleClass="table-card-title"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button text="↺  Actualizar"  styleClass="btn-outline"   onAction="#cargarTabla"/>
+            </HBox>
+
+            <HBox spacing="16" alignment="CENTER_LEFT" style="-fx-padding: 4 16 4 16; -fx-border-color: transparent transparent #e2e8f0 transparent;">
+                <HBox spacing="5" alignment="CENTER"><Region style="-fx-background-color:#fde68a;-fx-background-radius:3;-fx-min-width:10;-fx-min-height:10;-fx-pref-width:10;-fx-pref-height:10;-fx-max-width:10;-fx-max-height:10;"/><Label text="En espera"   styleClass="legend-label"/></HBox>
+                <HBox spacing="5" alignment="CENTER"><Region style="-fx-background-color:#bfdbfe;-fx-background-radius:3;-fx-min-width:10;-fx-min-height:10;-fx-pref-width:10;-fx-pref-height:10;-fx-max-width:10;-fx-max-height:10;"/><Label text="En consulta" styleClass="legend-label"/></HBox>
+                <HBox spacing="5" alignment="CENTER"><Region style="-fx-background-color:#bbf7d0;-fx-background-radius:3;-fx-min-width:10;-fx-min-height:10;-fx-pref-width:10;-fx-pref-height:10;-fx-max-width:10;-fx-max-height:10;"/><Label text="Atendido"    styleClass="legend-label"/></HBox>
+                <HBox spacing="5" alignment="CENTER"><Region style="-fx-background-color:#fecdd3;-fx-background-radius:3;-fx-min-width:10;-fx-min-height:10;-fx-pref-width:10;-fx-pref-height:10;-fx-max-width:10;-fx-max-height:10;"/><Label text="Cancelado"   styleClass="legend-label"/></HBox>
+            </HBox>
+
+            <TableView fx:id="tablaCola" VBox.vgrow="ALWAYS" styleClass="triage-table">
+                <columns>
+                    <TableColumn fx:id="colPos"       text="#"         prefWidth="42"/>
+                    <TableColumn fx:id="colEstado"    text="Estado"    prefWidth="100"/>
+                    <TableColumn fx:id="colNombre"    text="Paciente"  prefWidth="145"/>
+                    <TableColumn fx:id="colDpi"       text="DPI"       prefWidth="100"/>
+                    <TableColumn fx:id="colPrioridad" text="Prioridad" prefWidth="90"/>
+                    <TableColumn fx:id="colSintomas"  text="Síntomas"  prefWidth="160"/>
+                    <TableColumn fx:id="colMedico"    text="Médico"    prefWidth="115"/>
+                    <TableColumn fx:id="colIngreso"   text="Ingreso"   prefWidth="65"/>
+                </columns>
+                <placeholder>
+                    <Label text="No hay pacientes en espera" styleClass="table-placeholder"/>
+                </placeholder>
+            </TableView>
+
+            <HBox alignment="CENTER_RIGHT" spacing="10" styleClass="table-footer">
+                <Button text="Actualizar estado" styleClass="btn-warning" onAction="#handleActualizarEstado"/>
+                <Button text="Eliminar ingreso"  styleClass="btn-danger"  onAction="#handleEliminar"/>
+            </HBox>
+        </VBox>
+    </VBox>
+</HBox>

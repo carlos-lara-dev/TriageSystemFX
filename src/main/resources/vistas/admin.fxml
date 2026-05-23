@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox spacing="14" styleClass="page-root"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="triagesystem.AdminController">
+    <padding><Insets top="24" right="24" bottom="24" left="24"/></padding>
+
+    <Label text="Administración" styleClass="page-title"/>
+    <Label text="Gestión de usuarios, médicos y catálogos del sistema" styleClass="page-subtitle"/>
+
+    <TabPane tabClosingPolicy="UNAVAILABLE">
+
+        <!-- Tab: Usuarios -->
+        <Tab text="Usuarios">
+            <VBox spacing="10" styleClass="page-root">
+                <padding><Insets top="14" bottom="14"/></padding>
+                <HBox alignment="CENTER_RIGHT">
+                    <Button text="+ Nuevo usuario" styleClass="btn-primary" onAction="#handleNuevoUsuario"/>
+                </HBox>
+                <TableView fx:id="tablaUsuarios" prefHeight="220" styleClass="triage-table">
+                    <columns>
+                        <TableColumn fx:id="uColNombre"   text="Nombre completo" prefWidth="200"/>
+                        <TableColumn fx:id="uColUsuario"  text="Nombre usuario"  prefWidth="150"/>
+                        <TableColumn fx:id="uColRol"      text="Rol"             prefWidth="130"/>
+                        <TableColumn fx:id="uColActivo"   text="Estado"          prefWidth="90"/>
+                    </columns>
+                    <placeholder><Label text="No hay usuarios registrados" styleClass="table-placeholder"/></placeholder>
+                </TableView>
+                <HBox spacing="10" alignment="CENTER_RIGHT">
+                    <Button text="Editar" styleClass="btn-warning" onAction="#handleEditarUsuario"/>
+                    <Button text="Desactivar" styleClass="btn-danger" onAction="#handleDesactivarUsuario"/>
+                </HBox>
+            </VBox>
+        </Tab>
+
+        <!-- Tab: Médicos -->
+        <Tab text="Médicos">
+            <VBox spacing="10" styleClass="page-root">
+                <padding><Insets top="14" bottom="14"/></padding>
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Label text="Selecciona un médico para gestionar su usuario." styleClass="page-subtitle" HBox.hgrow="ALWAYS"/>
+                    <Button text="+ Nuevo médico" styleClass="btn-primary" onAction="#handleNuevoMedico"/>
+                </HBox>
+                <TableView fx:id="tablaMedicos" prefHeight="220" styleClass="triage-table">
+                    <columns>
+                        <TableColumn fx:id="mColNombre" text="Nombre"  prefWidth="320"/>
+                        <TableColumn fx:id="mColActivo" text="Estado"  prefWidth="100"/>
+                    </columns>
+                    <placeholder><Label text="No hay médicos registrados" styleClass="table-placeholder"/></placeholder>
+                </TableView>
+                <HBox spacing="10" alignment="CENTER_RIGHT">
+                    <Button text="Crear usuario" styleClass="btn-primary" onAction="#handleCrearUsuarioMedico"/>
+                    <Button text="Editar"        styleClass="btn-warning" onAction="#handleEditarMedico"/>
+                    <Button text="Desactivar"    styleClass="btn-danger"  onAction="#handleDesactivarMedico"/>
+                </HBox>
+            </VBox>
+        </Tab>
+
+        <!-- Tab: Roles y Prioridades (solo lectura) -->
+        <Tab text="Catálogos">
+            <HBox spacing="16" styleClass="page-root">
+                <padding><Insets top="14" bottom="14"/></padding>
+                <VBox spacing="8" HBox.hgrow="ALWAYS">
+                    <Label text="Roles" styleClass="panel-title"/>
+                    <TableView fx:id="tablaRoles" prefHeight="200" styleClass="triage-table">
+                        <columns>
+                            <TableColumn fx:id="rColNombre" text="Rol"         prefWidth="140"/>
+                            <TableColumn fx:id="rColDesc"   text="Descripción" prefWidth="200"/>
+                        </columns>
+                    </TableView>
+                </VBox>
+                <VBox spacing="8" HBox.hgrow="ALWAYS">
+                    <Label text="Prioridades" styleClass="panel-title"/>
+                    <TableView fx:id="tablaPrioridades" prefHeight="200" styleClass="triage-table">
+                        <columns>
+                            <TableColumn fx:id="pColNombre" text="Nivel"  prefWidth="100"/>
+                            <TableColumn fx:id="pColValor"  text="Valor"  prefWidth="70"/>
+                        </columns>
+                    </TableView>
+                </VBox>
+            </HBox>
+        </Tab>
+    </TabPane>
+</VBox>

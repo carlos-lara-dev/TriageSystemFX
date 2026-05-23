@@ -1,0 +1,51 @@
+name: Build Windows Installer
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Instalar JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Instalar WiX Toolset
+        run: choco install wixtoolset -y
+
+      - name: Compilar y crear fat JAR
+        run: mvn clean package -q
+
+      - name: Crear instalador Windows (.msi)
+        run: |
+          mkdir dist
+          jpackage `
+            --input target `
+            --main-jar SistemaConsultas-fat.jar `
+            --main-class triagesystem.MainApp `
+            --name "Sistema de Consultas" `
+            --app-version "1.0" `
+            --vendor "UMG" `
+            --type msi `
+            --dest dist `
+            --win-menu `
+            --win-shortcut `
+            --java-options "-Dfile.encoding=UTF-8" `
+            --java-options "--add-opens=java.base/java.lang=ALL-UNNAMED" `
+            --java-options "--add-opens=java.base/java.lang.reflect=ALL-UNNAMED"
+
+      - name: Subir instalador como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: SistemaConsultas-Windows
+          path: dist/*.msi
+          retention-days: 30

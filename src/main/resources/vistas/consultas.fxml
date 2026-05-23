@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox styleClass="page-root" spacing="0"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="triagesystem.ConsultasController">
+
+    <!-- Header -->
+    <VBox styleClass="form-panel" spacing="4">
+        <padding><Insets top="20" right="24" bottom="16" left="24"/></padding>
+        <Label text="Mis Consultas" styleClass="page-title"/>
+        <Label text="Selecciona un paciente de la cola para iniciar una consulta" styleClass="page-subtitle"/>
+    </VBox>
+
+    <!-- SplitPane ocupa el resto del espacio -->
+    <SplitPane dividerPositions="0.42" VBox.vgrow="ALWAYS">
+
+        <!-- IZQUIERDA: Cola de pacientes en espera -->
+        <VBox spacing="10" styleClass="page-root">
+            <padding><Insets top="16" right="12" bottom="16" left="16"/></padding>
+            <HBox alignment="CENTER_LEFT" spacing="8">
+                <Label text="Cola — En espera" styleClass="panel-title" HBox.hgrow="ALWAYS"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button text="↺  Actualizar" styleClass="btn-outline" onAction="#cargarCola"/>
+            </HBox>
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <HBox spacing="5" alignment="CENTER"><Region style="-fx-background-color:#fde68a;-fx-background-radius:3;-fx-min-width:10;-fx-min-height:10;-fx-pref-width:10;-fx-pref-height:10;-fx-max-width:10;-fx-max-height:10;"/><Label text="En espera"   styleClass="legend-label"/></HBox>
+                <HBox spacing="5" alignment="CENTER"><Region style="-fx-background-color:#bfdbfe;-fx-background-radius:3;-fx-min-width:10;-fx-min-height:10;-fx-pref-width:10;-fx-pref-height:10;-fx-max-width:10;-fx-max-height:10;"/><Label text="En consulta" styleClass="legend-label"/></HBox>
+                <HBox spacing="5" alignment="CENTER"><Region style="-fx-background-color:#bbf7d0;-fx-background-radius:3;-fx-min-width:10;-fx-min-height:10;-fx-pref-width:10;-fx-pref-height:10;-fx-max-width:10;-fx-max-height:10;"/><Label text="Atendido"    styleClass="legend-label"/></HBox>
+                <HBox spacing="5" alignment="CENTER"><Region style="-fx-background-color:#fecdd3;-fx-background-radius:3;-fx-min-width:10;-fx-min-height:10;-fx-pref-width:10;-fx-pref-height:10;-fx-max-width:10;-fx-max-height:10;"/><Label text="Cancelado"   styleClass="legend-label"/></HBox>
+            </HBox>
+            <TableView fx:id="tablaCola" VBox.vgrow="ALWAYS" styleClass="triage-table">
+                <columns>
+                    <TableColumn fx:id="ccColPos"       text="#"         prefWidth="38"/>
+                    <TableColumn fx:id="ccColEspera"    text="Espera"    prefWidth="70"/>
+                    <TableColumn fx:id="ccColNombre"    text="Paciente"  prefWidth="150"/>
+                    <TableColumn fx:id="ccColPrioridad" text="Prioridad" prefWidth="90"/>
+                    <TableColumn fx:id="ccColSintomas"  text="Síntomas"  prefWidth="160"/>
+                </columns>
+                <placeholder><Label text="No hay pacientes en espera" styleClass="table-placeholder"/></placeholder>
+            </TableView>
+        </VBox>
+
+        <!-- DERECHA: Estados A / B-C -->
+        <VBox>
+
+            <!-- Estado A: Sin selección -->
+            <VBox fx:id="panelSinSeleccion" alignment="CENTER" spacing="16" VBox.vgrow="ALWAYS">
+                <Label text="☝" style="-fx-font-size: 48px;"/>
+                <Label text="Selecciona un paciente de la lista para ver sus datos e iniciar una consulta"
+                       styleClass="page-subtitle" wrapText="true" textAlignment="CENTER" maxWidth="260"/>
+            </VBox>
+
+            <!-- Estado B / C: Detalle de paciente + observaciones -->
+            <VBox fx:id="panelDetalle" spacing="14" visible="false" managed="false" VBox.vgrow="ALWAYS">
+                <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+
+                <!-- Info paciente -->
+                <VBox styleClass="kpi-card" spacing="6">
+                    <Label text="PACIENTE" styleClass="field-label"/>
+                    <Label fx:id="lblNombrePaciente" text="—" styleClass="kpi-value-blue"/>
+                    <Label fx:id="lblDpi"      text="DPI: —"       styleClass="page-subtitle"/>
+                    <Label fx:id="lblPrioridad" text="Prioridad: —" styleClass="page-subtitle"/>
+                    <Separator/>
+                    <Label text="SÍNTOMAS" styleClass="field-label"/>
+                    <Label fx:id="lblSintomas" text="—" wrapText="true" styleClass="page-subtitle"/>
+                </VBox>
+
+                <!-- Observaciones -->
+                <Label text="OBSERVACIONES DE LA CONSULTA" styleClass="field-label"/>
+                <TextArea fx:id="txtObservaciones" prefHeight="100" wrapText="true"
+                          promptText="Escribe las observaciones de la consulta..." disable="true"
+                          VBox.vgrow="ALWAYS"/>
+
+                <!-- Botón de acción -->
+                <Button fx:id="btnAccion" text="▶  Iniciar consulta" styleClass="btn-primary"
+                        prefWidth="Infinity" onAction="#handleAccion"/>
+            </VBox>
+
+        </VBox>
+    </SplitPane>
+</VBox>

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox spacing="14" styleClass="page-root"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="triagesystem.PacientesController">
+    <padding><Insets top="24" right="24" bottom="24" left="24"/></padding>
+
+    <Label text="Gestión de pacientes" styleClass="page-title"/>
+    <Label text="Registro y consulta de pacientes del sistema" styleClass="page-subtitle"/>
+
+    <!-- Barra de búsqueda -->
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <TextField fx:id="txtBuscar" promptText="Buscar por nombre o DPI..." prefWidth="280"
+                   onAction="#handleBuscar"/>
+        <Button text="Buscar" styleClass="btn-outline" onAction="#handleBuscar"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="+ Nuevo paciente" styleClass="btn-primary" onAction="#handleNuevo"/>
+    </HBox>
+
+    <!-- Tabla -->
+    <VBox styleClass="table-card" VBox.vgrow="ALWAYS">
+        <TableView fx:id="tablaPacientes" VBox.vgrow="ALWAYS" styleClass="triage-table">
+            <columns>
+                <TableColumn fx:id="colNombre"    text="Nombre"            prefWidth="200"/>
+                <TableColumn fx:id="colDpi"       text="DPI"               prefWidth="120"/>
+                <TableColumn fx:id="colTelefono"  text="Teléfono"          prefWidth="120"/>
+                <TableColumn fx:id="colFecha"     text="Fecha nacimiento"  prefWidth="140"/>
+                <TableColumn fx:id="colEstado"    text="Estado"            prefWidth="90"/>
+            </columns>
+            <placeholder><Label text="No se encontraron pacientes" styleClass="table-placeholder"/></placeholder>
+        </TableView>
+        <HBox alignment="CENTER_RIGHT" spacing="10" styleClass="table-footer">
+            <Button text="Editar" styleClass="btn-warning" onAction="#handleEditar"/>
+            <Button text="Desactivar" styleClass="btn-danger" onAction="#handleDesactivar"/>
+        </HBox>
+    </VBox>
+
+    <!-- Formulario (oculto hasta que se pulsa Nuevo o Editar) -->
+    <VBox fx:id="panelFormulario" styleClass="form-card" visible="false" managed="false" spacing="12">
+        <padding><Insets top="16" right="16" bottom="16" left="16"/></padding>
+        <Label fx:id="lblTituloForm" text="Nuevo paciente" styleClass="panel-title"/>
+        <Separator/>
+        <GridPane hgap="16" vgap="10">
+            <Label text="Nombre completo:" GridPane.columnIndex="0" GridPane.rowIndex="0" styleClass="field-label"/>
+            <TextField fx:id="fNombre" GridPane.columnIndex="1" GridPane.rowIndex="0" prefWidth="280"/>
+
+            <Label text="DPI:" GridPane.columnIndex="0" GridPane.rowIndex="1" styleClass="field-label"/>
+            <TextField fx:id="fDpi" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+
+            <Label text="Teléfono:" GridPane.columnIndex="0" GridPane.rowIndex="2" styleClass="field-label"/>
+            <TextField fx:id="fTelefono" GridPane.columnIndex="1" GridPane.rowIndex="2" promptText="Opcional"/>
+
+            <Label text="Fecha de nacimiento:" GridPane.columnIndex="0" GridPane.rowIndex="3" styleClass="field-label"/>
+            <DatePicker fx:id="fFecha" GridPane.columnIndex="1" GridPane.rowIndex="3" prefWidth="280"/>
+        </GridPane>
+        <HBox spacing="10">
+            <Button text="Guardar" styleClass="btn-primary" onAction="#handleGuardar"/>
+            <Button text="Cancelar" styleClass="btn-outline" onAction="#handleCancelar"/>
+        </HBox>
+    </VBox>
+</VBox>

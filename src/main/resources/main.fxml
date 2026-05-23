@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane prefHeight="700.0" prefWidth="1100.0"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="triagesystem.MainController"
+            stylesheets="@main.css">
+
+    <!-- ===== TOPBAR ===== -->
+    <top>
+        <HBox styleClass="header" alignment="CENTER_LEFT" prefHeight="56" spacing="12">
+            <padding><Insets left="20" right="20"/></padding>
+            <Label text="🏥 Sistema de Consultas" styleClass="header-title"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="lblNombreUsuario" styleClass="header-user"/>
+            <Label fx:id="lblRol" styleClass="header-chip"/>
+            <Button text="Cerrar sesión" styleClass="btn-logout" onAction="#handleCerrarSesion"/>
+        </HBox>
+    </top>
+
+    <!-- ===== SIDEBAR ===== -->
+    <left>
+        <VBox styleClass="sidebar" prefWidth="185" spacing="2">
+            <padding><Insets top="16" bottom="16" left="8" right="8"/></padding>
+
+            <Label text="PRINCIPAL" styleClass="sidebar-section"/>
+            <Button fx:id="btnInicio"    text="  Inicio"          styleClass="nav-btn" prefWidth="Infinity" onAction="#irInicio"/>
+            <Button fx:id="btnConsultas" text="  Mis Consultas"   styleClass="nav-btn" prefWidth="Infinity" onAction="#irMisConsultas"/>
+
+            <Separator styleClass="sidebar-divider"><VBox.margin><Insets top="6" bottom="6"/></VBox.margin></Separator>
+            <Label text="GESTIÓN" styleClass="sidebar-section"/>
+            <Button fx:id="btnCola"      text="  Cola / Registro" styleClass="nav-btn" prefWidth="Infinity" onAction="#irCola"/>
+            <Button fx:id="btnPacientes" text="  Pacientes"       styleClass="nav-btn" prefWidth="Infinity" onAction="#irPacientes"/>
+
+            <Separator styleClass="sidebar-divider"><VBox.margin><Insets top="6" bottom="6"/></VBox.margin></Separator>
+            <Label text="SISTEMA" styleClass="sidebar-section"/>
+            <Button fx:id="btnReportes" text="  Reportería"     styleClass="nav-btn" prefWidth="Infinity" onAction="#irReportes"/>
+            <Button fx:id="btnAdmin"    text="  Administración" styleClass="nav-btn" prefWidth="Infinity" onAction="#irAdmin"/>
+        </VBox>
+    </left>
+
+    <!-- ===== CONTENIDO DINÁMICO ===== -->
+    <center>
+        <StackPane fx:id="contenidoPrincipal" styleClass="content-area"/>
+    </center>
+
+</BorderPane>

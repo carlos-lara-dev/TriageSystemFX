@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane prefHeight="800.0" prefWidth="1000.0"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="triagesystem.LoginController"
+            stylesheets="@main.css">
+
+    <BorderPane
+            AnchorPane.topAnchor="0"
+            AnchorPane.bottomAnchor="0"
+            AnchorPane.leftAnchor="0"
+            AnchorPane.rightAnchor="0"
+            styleClass="login-root">
+
+        <!-- HEADER -->
+        <top>
+            <VBox alignment="CENTER" spacing="6" styleClass="login-header">
+                <padding>
+                    <Insets top="32" bottom="24" left="24" right="24"/>
+                </padding>
+
+                <Label text="🏥 Sistema de Consultas" styleClass="login-title"/>
+                <Label text="Universidad Mariano Gálvez de Guatemala"
+                       styleClass="login-subtitle"/>
+            </VBox>
+        </top>
+
+        <!-- LOGIN CENTER -->
+        <center>
+            <StackPane alignment="CENTER">
+
+                <VBox alignment="CENTER"
+                      spacing="14"
+                      styleClass="login-card"
+                      maxWidth="320"
+                      maxHeight="400"
+                    >
+
+                    <padding>
+                        <Insets top="28" bottom="28" left="28" right="28"/>
+                    </padding>
+
+                    <Label text="Nombre de usuario" styleClass="field-label"/>
+
+                    <TextField fx:id="txtNombreUsuario"
+                               promptText="Ingresa tu usuario"/>
+
+                    <Label text="Contraseña" styleClass="field-label"/>
+
+                    <PasswordField fx:id="txtClave"
+                                   promptText="Ingresa tu contraseña"/>
+
+                    <Label fx:id="lblError"
+                           styleClass="login-error"
+                           wrapText="true"
+                           visible="false"/>
+
+                    <Button fx:id="btnIngresar"
+                            text="Iniciar sesión"
+                            styleClass="btn-primary"
+                            prefWidth="Infinity"
+                            defaultButton="true"
+                            onAction="#handleLogin">
+
+                        <VBox.margin>
+                            <Insets top="6"/>
+                        </VBox.margin>
+
+                    </Button>
+
+                </VBox>
+
+            </StackPane>
+        </center>
+
+        <!-- FOOTER -->
+        <bottom>
+            <Label text="© 2026 — Proyecto Final POO"
+                   styleClass="login-footer"
+                   BorderPane.alignment="CENTER">
+
+                <BorderPane.margin>
+                    <Insets top="20" bottom="20"/>
+                </BorderPane.margin>
+
+            </Label>
+        </bottom>
+
+    </BorderPane>
+
+</AnchorPane>

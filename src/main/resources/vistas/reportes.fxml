@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.chart.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox spacing="14" styleClass="page-root"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="triagesystem.ReportesController">
+    <padding><Insets top="24" right="24" bottom="24" left="24"/></padding>
+
+    <Label text="Reportería" styleClass="page-title"/>
+    <Label text="Métricas operativas del área de emergencias" styleClass="page-subtitle"/>
+
+    <!-- Filtro de período -->
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <Button text="Hoy"         styleClass="btn-outline" onAction="#filtrarHoy"/>
+        <Button text="Esta semana" styleClass="btn-outline" onAction="#filtrarSemana"/>
+        <Button text="Este mes"    styleClass="btn-outline" onAction="#filtrarMes"/>
+        <Separator orientation="VERTICAL"/>
+        <Label text="Desde:" styleClass="field-label"/>
+        <DatePicker fx:id="dpDesde" prefWidth="140"/>
+        <Label text="Hasta:" styleClass="field-label"/>
+        <DatePicker fx:id="dpHasta" prefWidth="140"/>
+        <Button text="Filtrar" styleClass="btn-primary" onAction="#handleFiltrar"/>
+    </HBox>
+
+    <!-- KPIs -->
+    <HBox spacing="12">
+        <VBox styleClass="kpi-card" HBox.hgrow="ALWAYS">
+            <Label text="Tiempo prom. espera" styleClass="kpi-label"/>
+            <Label fx:id="lblEspera" text="—" styleClass="kpi-value-amber"/>
+            <Label text="minutos" styleClass="kpi-hint"/>
+        </VBox>
+        <VBox styleClass="kpi-card" HBox.hgrow="ALWAYS">
+            <Label text="Tiempo prom. consulta" styleClass="kpi-label"/>
+            <Label fx:id="lblConsulta" text="—" styleClass="kpi-value-blue"/>
+            <Label text="minutos" styleClass="kpi-hint"/>
+        </VBox>
+        <VBox styleClass="kpi-card" HBox.hgrow="ALWAYS">
+            <Label text="Pacientes atendidos" styleClass="kpi-label"/>
+            <Label fx:id="lblAtendidos" text="—" styleClass="kpi-value-green"/>
+            <Label text="en el período" styleClass="kpi-hint"/>
+        </VBox>
+    </HBox>
+
+    <!-- Gráficas -->
+    <HBox spacing="14" VBox.vgrow="ALWAYS">
+        <!-- Horas pico -->
+        <VBox styleClass="chart-card" HBox.hgrow="ALWAYS">
+            <Label text="Horas pico de ingreso" styleClass="panel-title"/>
+            <BarChart fx:id="graficaHoras" VBox.vgrow="ALWAYS" animated="false"
+                      legendVisible="false" barGap="2" categoryGap="6">
+                <xAxis><CategoryAxis label="Hora" tickLabelRotation="-45"/></xAxis>
+                <yAxis><NumberAxis label="Ingresos" minorTickVisible="false"/></yAxis>
+            </BarChart>
+        </VBox>
+
+        <!-- Top médicos — barras horizontales -->
+        <VBox styleClass="chart-card" HBox.hgrow="ALWAYS">
+            <Label text="Médicos con más atenciones" styleClass="panel-title"/>
+            <BarChart fx:id="graficaMedicos" VBox.vgrow="ALWAYS" animated="false"
+                      legendVisible="false" barGap="3" categoryGap="30">
+                <xAxis><NumberAxis label="Pacientes" minorTickVisible="false"/></xAxis>
+                <yAxis><CategoryAxis label=""/></yAxis>
+            </BarChart>
+        </VBox>
+
+        <!-- Distribución por prioridad -->
+        <VBox styleClass="chart-card" HBox.hgrow="ALWAYS">
+            <Label text="Distribución por prioridad" styleClass="panel-title"/>
+            <PieChart fx:id="graficaPrioridades" VBox.vgrow="ALWAYS" animated="true"
+                      legendVisible="true" labelsVisible="true" startAngle="90"/>
+        </VBox>
+    </HBox>
+</VBox>
