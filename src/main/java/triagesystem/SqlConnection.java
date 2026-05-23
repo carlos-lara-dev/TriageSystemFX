@@ -6,9 +6,9 @@ import java.sql.SQLException;
 
 public class SqlConnection {
     private static Connection conn;
-    private static final String URL  = "jdbc:mysql://kodama.proxy.rlwy.net:22227/triage_system?useSSL=false&serverTimezone=UTC";
-    private static final String USER = "root";
-    private static final String PASS = "AdwdHGptQcFRLQKprhGOntayodOhdAwm"; // "428003";
+    private static final String URL  = "jdbc:mysql://207.180.202.235:3306/triage_system?useSSL=false&connectionTimeZone=GMT-6&forceConnectionTimeZoneToSession=true";
+    private static final String USER = "public-user"; // "root";
+    private static final String PASS = "1234!"; // "428003";
 
     public static Connection getConnection() {
         try {

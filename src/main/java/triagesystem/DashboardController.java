@@ -118,7 +118,7 @@ public class DashboardController implements Initializable {
         try {
             StackPane contenido = (StackPane) tablaProximos.getScene().lookup("#contenidoPrincipal");
             if (contenido != null) {
-                javafx.scene.Node vista = FXMLLoader.load(getClass().getResource("/vistas/cola.fxml"));
+                javafx.scene.Node vista = FXMLLoader.load(getClass().getResource("/vistas/cola_registro.fxml"));
                 contenido.getChildren().setAll(vista);
             }
         } catch (Exception e) {
