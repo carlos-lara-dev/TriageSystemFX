@@ -35,12 +35,21 @@ public class LoginController implements Initializable {
             return;
         }
 
-        if (!authService.login(usuario, clave)) {
-            mostrarError("Usuario o contraseña incorrectos.");
-            return;
-        }
+        // Mostrar retroalimentación mientras se consulta la BD
+        lblError.setText("Verificando...");
+        lblError.setStyle("-fx-text-fill: #64748b;");
+        lblError.setVisible(true);
 
-        abrirVentanaPrincipal();
+        LoaderOverlay.runAsync(txtNombreUsuario,
+            () -> authService.login(usuario, clave),
+            ok -> {
+                if (!ok) {
+                    mostrarError("Usuario o contraseña incorrectos.");
+                    return;
+                }
+                abrirVentanaPrincipal();
+            }
+        );
     }
 
     private void abrirVentanaPrincipal() {

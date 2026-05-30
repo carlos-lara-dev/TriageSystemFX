@@ -35,7 +35,7 @@ public class PacientesController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         configurarColumnas();
-        cargarTabla();
+        javafx.application.Platform.runLater(this::cargarTabla);
     }
 
     private void configurarColumnas() {
@@ -53,20 +53,27 @@ public class PacientesController implements Initializable {
     }
 
     private void cargarTabla() {
-        List<Paciente> lista = pacienteCRUD.getAll();
-        tablaPacientes.setItems(FXCollections.observableArrayList(lista));
+        LoaderOverlay.runAsync(tablaPacientes,
+            () -> pacienteCRUD.getAll(),
+            lista -> tablaPacientes.setItems(FXCollections.observableArrayList(lista))
+        );
     }
 
     @FXML private void handleBuscar() {
         String termino = txtBuscar.getText().trim().toLowerCase();
-        List<Paciente> todos = pacienteCRUD.getAll();
-        if (!termino.isEmpty()) {
-            todos = todos.stream()
-                .filter(p -> p.getNombre().toLowerCase().contains(termino)
-                          || p.getDpi().toLowerCase().contains(termino))
-                .collect(java.util.stream.Collectors.toList());
-        }
-        tablaPacientes.setItems(FXCollections.observableArrayList(todos));
+        LoaderOverlay.runAsync(tablaPacientes,
+            () -> {
+                List<Paciente> todos = pacienteCRUD.getAll();
+                if (!termino.isEmpty()) {
+                    return todos.stream()
+                        .filter(p -> p.getNombre().toLowerCase().contains(termino)
+                                  || p.getDpi().toLowerCase().contains(termino))
+                        .collect(java.util.stream.Collectors.toList());
+                }
+                return todos;
+            },
+            lista -> tablaPacientes.setItems(FXCollections.observableArrayList(lista))
+        );
     }
 
     @FXML private void handleNuevo() {
@@ -102,16 +109,26 @@ public class PacientesController implements Initializable {
         p.setTelefono(fTelefono.getText().trim());
         p.setFecha_nacimiento(fFecha.getValue().toString());
 
-        boolean ok = (pacienteEditando != null) ? pacienteCRUD.update(p) : pacienteCRUD.insert(p);
-        if (ok) { mostrarFormulario(false); cargarTabla(); }
-        else alerta("Error", "No se pudo guardar el paciente.");
+        final boolean esEdicion = pacienteEditando != null;
+        LoaderOverlay.runAsync(tablaPacientes,
+            () -> esEdicion ? pacienteCRUD.update(p) : pacienteCRUD.insert(p),
+            ok -> {
+                if (ok) { mostrarFormulario(false); cargarTabla(); }
+                else alerta("Error", "No se pudo guardar el paciente.");
+            }
+        );
     }
 
     @FXML private void handleDesactivar() {
         Paciente sel = tablaPacientes.getSelectionModel().getSelectedItem();
         if (sel == null) { alerta("Sin selección", "Selecciona un paciente."); return; }
-        if (pacienteCRUD.delete(sel.getId_paciente())) cargarTabla();
-        else alerta("Error", "No se pudo desactivar el paciente.");
+        LoaderOverlay.runAsync(tablaPacientes,
+            () -> pacienteCRUD.delete(sel.getId_paciente()),
+            ok -> {
+                if (ok) cargarTabla();
+                else alerta("Error", "No se pudo desactivar el paciente.");
+            }
+        );
     }
 
     @FXML private void handleCancelar() { mostrarFormulario(false); }

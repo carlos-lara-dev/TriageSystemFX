@@ -44,7 +44,7 @@ public class AdminController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         configurarColumnas();
-        cargarTodas();
+        javafx.application.Platform.runLater(this::cargarTodas);
     }
 
     private void configurarColumnas() {
@@ -76,10 +76,24 @@ public class AdminController implements Initializable {
     }
 
     private void cargarTodas() {
-        tablaUsuarios.setItems(FXCollections.observableArrayList(usuarioCRUD.getAll()));
-        tablaMedicos.setItems(FXCollections.observableArrayList(medicoCRUD.getAll()));
-        tablaRoles.setItems(FXCollections.observableArrayList(rolCRUD.getAll()));
-        tablaPrioridades.setItems(FXCollections.observableArrayList(prioridadCRUD.getAll()));
+        LoaderOverlay.runAsync(tablaUsuarios,
+            () -> new Object[]{
+                usuarioCRUD.getAll(),
+                medicoCRUD.getAll(),
+                rolCRUD.getAll(),
+                prioridadCRUD.getAll()
+            },
+            result -> {
+                @SuppressWarnings("unchecked") List<Usuario>   us = (List<Usuario>)   result[0];
+                @SuppressWarnings("unchecked") List<Medico>    ms = (List<Medico>)    result[1];
+                @SuppressWarnings("unchecked") List<Rol>       rs = (List<Rol>)       result[2];
+                @SuppressWarnings("unchecked") List<Prioridad> ps = (List<Prioridad>) result[3];
+                tablaUsuarios.setItems(FXCollections.observableArrayList(us));
+                tablaMedicos.setItems(FXCollections.observableArrayList(ms));
+                tablaRoles.setItems(FXCollections.observableArrayList(rs));
+                tablaPrioridades.setItems(FXCollections.observableArrayList(ps));
+            }
+        );
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -87,36 +101,55 @@ public class AdminController implements Initializable {
     // ════════════════════════════════════════════════════════════════════════
 
     @FXML private void handleNuevoUsuario() {
-        // Excluir el rol "Médico" — esos usuarios se crean desde el catálogo de médicos
-        List<Rol> roles = rolesNoMedico();
-        if (roles.isEmpty()) { alerta("Sin roles", "No hay roles disponibles para crear un usuario."); return; }
-        Dialog<Usuario> dialog = crearDialogoUsuario(null, roles);
-        dialog.showAndWait().ifPresent(u -> {
-            if (usuarioCRUD.insert(u)) cargarTodas();
-            else alerta("Error", "No se pudo crear el usuario.");
-        });
+        // Fetch roles en background, luego mostrar diálogo
+        LoaderOverlay.runAsync(tablaUsuarios,
+            () -> rolesNoMedico(),
+            roles -> {
+                if (roles.isEmpty()) { alerta("Sin roles", "No hay roles disponibles para crear un usuario."); return; }
+                Dialog<Usuario> dialog = crearDialogoUsuario(null, roles);
+                dialog.showAndWait().ifPresent(u ->
+                    LoaderOverlay.runAsync(tablaUsuarios,
+                        () -> usuarioCRUD.insert(u),
+                        ok -> {
+                            if (ok) cargarTodas();
+                            else alerta("Error", "No se pudo crear el usuario.");
+                        }
+                    )
+                );
+            }
+        );
     }
 
     @FXML private void handleEditarUsuario() {
         Usuario sel = tablaUsuarios.getSelectionModel().getSelectedItem();
         if (sel == null) { alerta("Sin selección", "Selecciona un usuario."); return; }
 
-        // Si el usuario tiene rol Médico, solo se editan datos básicos
-        boolean esMedico = sel.getId_rol() != null && sel.getId_rol() == Roles.MEDICO;
-        List<Rol> roles  = esMedico ? rolCRUD.getAll() : rolesNoMedico();
-
-        Dialog<Usuario> dialog = crearDialogoUsuario(sel, roles);
-        dialog.showAndWait().ifPresent(u -> {
-            if (usuarioCRUD.update(u)) cargarTodas();
-            else alerta("Error", "No se pudo actualizar el usuario.");
-        });
+        final boolean esMedico = sel.getId_rol() != null && sel.getId_rol() == Roles.MEDICO;
+        LoaderOverlay.runAsync(tablaUsuarios,
+            () -> esMedico ? rolCRUD.getAll() : rolesNoMedico(),
+            roles -> {
+                Dialog<Usuario> dialog = crearDialogoUsuario(sel, roles);
+                dialog.showAndWait().ifPresent(u ->
+                    LoaderOverlay.runAsync(tablaUsuarios,
+                        () -> usuarioCRUD.update(u),
+                        ok -> {
+                            if (ok) cargarTodas();
+                            else alerta("Error", "No se pudo actualizar el usuario.");
+                        }
+                    )
+                );
+            }
+        );
     }
 
     @FXML private void handleDesactivarUsuario() {
         Usuario sel = tablaUsuarios.getSelectionModel().getSelectedItem();
         if (sel == null) { alerta("Sin selección", "Selecciona un usuario."); return; }
         sel.setActivo(false);
-        if (usuarioCRUD.update(sel)) cargarTodas();
+        LoaderOverlay.runAsync(tablaUsuarios,
+            () -> usuarioCRUD.update(sel),
+            ok -> { if (ok) cargarTodas(); }
+        );
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -129,7 +162,10 @@ public class AdminController implements Initializable {
         d.showAndWait().ifPresent(nombre -> {
             if (!nombre.trim().isEmpty()) {
                 Medico m = new Medico(); m.setNombre(nombre.trim()); m.setActivo(true);
-                if (medicoCRUD.insert(m)) cargarTodas();
+                LoaderOverlay.runAsync(tablaUsuarios,
+                    () -> medicoCRUD.insert(m),
+                    ok -> { if (ok) cargarTodas(); }
+                );
             }
         });
     }
@@ -142,7 +178,10 @@ public class AdminController implements Initializable {
         d.showAndWait().ifPresent(nombre -> {
             if (!nombre.trim().isEmpty()) {
                 sel.setNombre(nombre.trim());
-                if (medicoCRUD.update(sel)) cargarTodas();
+                LoaderOverlay.runAsync(tablaUsuarios,
+                    () -> medicoCRUD.update(sel),
+                    ok -> { if (ok) cargarTodas(); }
+                );
             }
         });
     }
@@ -150,7 +189,10 @@ public class AdminController implements Initializable {
     @FXML private void handleDesactivarMedico() {
         Medico sel = tablaMedicos.getSelectionModel().getSelectedItem();
         if (sel == null) { alerta("Sin selección", "Selecciona un médico."); return; }
-        if (medicoCRUD.delete(sel.getId_medico())) cargarTodas();
+        LoaderOverlay.runAsync(tablaUsuarios,
+            () -> medicoCRUD.delete(sel.getId_medico()),
+            ok -> { if (ok) cargarTodas(); }
+        );
     }
 
     /**
@@ -161,31 +203,45 @@ public class AdminController implements Initializable {
         Medico sel = tablaMedicos.getSelectionModel().getSelectedItem();
         if (sel == null) { alerta("Sin selección", "Selecciona un médico de la tabla."); return; }
 
-        if (usuarioMedicoCRUD.existePorMedico(sel.getId_medico())) {
-            alerta("Ya tiene usuario", "El médico \"" + sel.getNombre() + "\" ya tiene un usuario asignado.");
-            return;
-        }
+        // 1. Verificar + fetch rol Médico en background
+        LoaderOverlay.runAsync(tablaUsuarios,
+            () -> new Object[]{
+                usuarioMedicoCRUD.existePorMedico(sel.getId_medico()),
+                rolCRUD.getAll().stream().filter(r -> r.getId_rol() == Roles.MEDICO).findFirst().orElse(null)
+            },
+            result -> {
+                boolean yaExiste = (boolean) result[0];
+                Rol     rolMedico = (Rol)    result[1];
 
-        Rol rolMedico = rolCRUD.getAll().stream()
-            .filter(r -> r.getId_rol() == Roles.MEDICO)
-            .findFirst().orElse(null);
-        if (rolMedico == null) {
-            alerta("Error", "No se encontró el rol 'Médico' en la base de datos.");
-            return;
-        }
+                if (yaExiste) {
+                    alerta("Ya tiene usuario", "El médico \"" + sel.getNombre() + "\" ya tiene un usuario asignado.");
+                    return;
+                }
+                if (rolMedico == null) {
+                    alerta("Error", "No se encontró el rol 'Médico' en la base de datos.");
+                    return;
+                }
 
-        Dialog<Usuario> dialog = crearDialogoUsuarioMedico(sel, rolMedico);
-        dialog.showAndWait().ifPresent(u -> {
-            Integer idUsuario = usuarioCRUD.insertGetId(u);
-            if (idUsuario == null) {
-                alerta("Error", "No se pudo crear el usuario.");
-                return;
+                // 2. Mostrar diálogo en hilo JavaFX
+                Dialog<Usuario> dialog = crearDialogoUsuarioMedico(sel, rolMedico);
+                dialog.showAndWait().ifPresent(u ->
+                    // 3. Insertar en background
+                    LoaderOverlay.runAsync(tablaUsuarios,
+                        () -> {
+                            Integer idUsuario = usuarioCRUD.insertGetId(u);
+                            if (idUsuario == null) return "error";
+                            if (!usuarioMedicoCRUD.insert(idUsuario, sel.getId_medico())) return "advertencia";
+                            return "ok";
+                        },
+                        status -> {
+                            if ("error".equals(status))       alerta("Error", "No se pudo crear el usuario.");
+                            else if ("advertencia".equals(status)) alerta("Advertencia", "Usuario creado pero no se pudo vincular al médico.");
+                            cargarTodas();
+                        }
+                    )
+                );
             }
-            if (!usuarioMedicoCRUD.insert(idUsuario, sel.getId_medico())) {
-                alerta("Advertencia", "Usuario creado pero no se pudo vincular al médico.");
-            }
-            cargarTodas();
-        });
+        );
     }
 
     // ════════════════════════════════════════════════════════════════════════

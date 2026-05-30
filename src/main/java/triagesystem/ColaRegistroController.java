@@ -48,8 +48,10 @@ public class ColaRegistroController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         configurarColumnas();
-        cargarCombosFormulario();
-        cargarTabla();
+        javafx.application.Platform.runLater(() -> {
+            cargarCombosFormulario();
+            cargarTabla();
+        });
     }
 
     // ════════════════════════════════════════════════════════════════════════
@@ -57,19 +59,33 @@ public class ColaRegistroController implements Initializable {
     // ════════════════════════════════════════════════════════════════════════
 
     private void cargarCombosFormulario() {
-        cbPaciente.setItems(FXCollections.observableArrayList(pacienteCRUD.getAll()));
-        cbPaciente.setConverter(conv(p -> p != null ? p.getNombre() + " — " + p.getDpi() : ""));
+        LoaderOverlay.runAsync(tablaCola,
+            () -> new Object[]{
+                pacienteCRUD.getAll(),
+                prioridadCRUD.getAll(),
+                estadoCRUD.getAll(),
+                medicoCRUD.getAll()
+            },
+            result -> {
+                @SuppressWarnings("unchecked") List<Paciente>  pacientes   = (List<Paciente>)  result[0];
+                @SuppressWarnings("unchecked") List<Prioridad> prioridades = (List<Prioridad>) result[1];
+                @SuppressWarnings("unchecked") List<Estado>    estados     = (List<Estado>)    result[2];
+                @SuppressWarnings("unchecked") List<Medico>    medicos     = (List<Medico>)    result[3];
 
-        cbPrioridad.setItems(FXCollections.observableArrayList(prioridadCRUD.getAll()));
-        cbPrioridad.setConverter(conv(p -> p != null ? p.getNombre() : ""));
+                cbPaciente.setItems(FXCollections.observableArrayList(pacientes));
+                cbPaciente.setConverter(conv(p -> p != null ? p.getNombre() + " — " + p.getDpi() : ""));
 
-        List<Estado> estados = estadoCRUD.getAll();
-        cbEstado.setItems(FXCollections.observableArrayList(estados));
-        cbEstado.setConverter(conv(e -> e != null ? e.getNombre() : ""));
-        if (!estados.isEmpty()) cbEstado.setValue(estados.get(0));
+                cbPrioridad.setItems(FXCollections.observableArrayList(prioridades));
+                cbPrioridad.setConverter(conv(p -> p != null ? p.getNombre() : ""));
 
-        cbMedicoForm.setItems(FXCollections.observableArrayList(medicoCRUD.getAll()));
-        cbMedicoForm.setConverter(conv(m -> m != null ? m.getNombre() : ""));
+                cbEstado.setItems(FXCollections.observableArrayList(estados));
+                cbEstado.setConverter(conv(e -> e != null ? e.getNombre() : ""));
+                if (!estados.isEmpty()) cbEstado.setValue(estados.get(0));
+
+                cbMedicoForm.setItems(FXCollections.observableArrayList(medicos));
+                cbMedicoForm.setConverter(conv(m -> m != null ? m.getNombre() : ""));
+            }
+        );
     }
 
     @FXML
@@ -90,31 +106,40 @@ public class ColaRegistroController implements Initializable {
         ingreso.setId_estado(estado.getId_estado());
         ingreso.setSintomas(sintomas);
 
-        if (!ingresoCRUD.insert(ingreso)) {
-            mostrarMensaje("No se pudo registrar el ingreso.", false);
-            return;
-        }
+        final Medico medico = cbMedicoForm.getValue();
+        final String dpiPaciente = paciente.getDpi();
 
-        Medico medico = cbMedicoForm.getValue();
-        if (medico != null) {
-            List<IngresoDetalle> detalles = ingresoCRUD.getAllDetalle();
-            IngresoDetalle ultimo = detalles.stream()
-                .filter(d -> d.getDpi().equals(paciente.getDpi()))
-                .findFirst().orElse(null);
-            if (ultimo != null) {
-                Consulta c = new Consulta();
-                c.setId_ingreso(ultimo.getId_ingreso());
-                c.setId_medico(medico.getId_medico());
-                c.setHora_inicio(java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-                c.setHora_fin("");
-                c.setObservaciones("");
-                consultaCRUD.insert(c);
+        LoaderOverlay.runAsync(tablaCola,
+            () -> {
+                if (!ingresoCRUD.insert(ingreso)) return false;
+                if (medico != null) {
+                    List<IngresoDetalle> detalles = ingresoCRUD.getAllDetalle();
+                    IngresoDetalle ultimo = detalles.stream()
+                        .filter(d -> d.getDpi().equals(dpiPaciente))
+                        .findFirst().orElse(null);
+                    if (ultimo != null) {
+                        Consulta c = new Consulta();
+                        c.setId_ingreso(ultimo.getId_ingreso());
+                        c.setId_medico(medico.getId_medico());
+                        c.setHora_inicio(java.time.LocalDateTime.now().format(
+                            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                        c.setHora_fin("");
+                        c.setObservaciones("");
+                        consultaCRUD.insert(c);
+                    }
+                }
+                return true;
+            },
+            ok -> {
+                if (ok) {
+                    mostrarMensaje("Ingreso registrado correctamente.", true);
+                    handleLimpiar();
+                    cargarTabla();
+                } else {
+                    mostrarMensaje("No se pudo registrar el ingreso.", false);
+                }
             }
-        }
-
-        mostrarMensaje("Ingreso registrado correctamente.", true);
-        handleLimpiar();
-        cargarTabla(); // ← actualiza la cola automáticamente
+        );
     }
 
     @FXML
@@ -179,19 +204,21 @@ public class ColaRegistroController implements Initializable {
 
     @FXML
     public void cargarTabla() {
-        List<IngresoDetalle> lista = ingresoCRUD.getAllDetalle().stream()
-            .filter(i -> i.getId_estado() == 1 || i.getId_estado() == 2)
-            .collect(java.util.stream.Collectors.toList());
-        tablaCola.setItems(FXCollections.observableArrayList(lista));
-        lblTotalCola.setText("Cola (" + lista.size() + " pacientes)");
-
-        IngresoDetalle siguiente = lista.stream()
-            .filter(i -> i.getId_estado() == 1).findFirst().orElse(null);
-        if (siguiente != null) {
-            lblSiguiente.setText(siguiente.getNombre_paciente() + " — " + siguiente.getNombre_prioridad());
-        } else {
-            lblSiguiente.setText("Sin pacientes en espera");
-        }
+        LoaderOverlay.runAsync(tablaCola,
+            () -> ingresoCRUD.getAllDetalle().stream()
+                .filter(i -> i.getId_estado() == 1 || i.getId_estado() == 2)
+                .collect(java.util.stream.Collectors.toList()),
+            lista -> {
+                tablaCola.setItems(FXCollections.observableArrayList(lista));
+                lblTotalCola.setText("Cola (" + lista.size() + " pacientes)");
+                IngresoDetalle siguiente = lista.stream()
+                    .filter(i -> i.getId_estado() == 1).findFirst().orElse(null);
+                if (siguiente != null)
+                    lblSiguiente.setText(siguiente.getNombre_paciente() + " — " + siguiente.getNombre_prioridad());
+                else
+                    lblSiguiente.setText("Sin pacientes en espera");
+            }
+        );
     }
 
     @FXML
@@ -201,34 +228,45 @@ public class ColaRegistroController implements Initializable {
             return;
         }
 
-        // Obtener médicos disponibles (sin consulta activa)
-        List<Medico> disponibles = medicoCRUD.getMedicosDisponibles();
-        if (disponibles.isEmpty()) {
-            alerta("Sin médicos disponibles", "No hay médicos disponibles en este momento.\nTodos están atendiendo consultas activas.");
-            return;
-        }
+        // 1. Obtener médicos disponibles en background
+        LoaderOverlay.runAsync(tablaCola,
+            () -> medicoCRUD.getMedicosDisponibles(),
+            disponibles -> {
+                if (disponibles.isEmpty()) {
+                    alerta("Sin médicos disponibles",
+                           "No hay médicos disponibles en este momento.\nTodos están atendiendo consultas activas.");
+                    return;
+                }
 
-        // Diálogo para seleccionar médico
-        IngresoDetalle siguiente = tablaCola.getItems().get(0);
-        Medico medicoElegido = mostrarDialogoMedico(siguiente.getNombre_paciente(), disponibles);
-        if (medicoElegido == null) return; // usuario canceló
+                // 2. Mostrar diálogo en hilo JavaFX
+                IngresoDetalle siguiente = tablaCola.getItems().get(0);
+                Medico medicoElegido = mostrarDialogoMedico(siguiente.getNombre_paciente(), disponibles);
+                if (medicoElegido == null) return;
 
-        // Cambiar estado del ingreso a "En consulta" (id=2)
-        if (!ingresoCRUD.updateEstado(siguiente.getId_ingreso(), 2)) {
-            alerta("Error", "No se pudo actualizar el estado del paciente.");
-            return;
-        }
+                final Medico medicoFinal = medicoElegido;
+                final int idIngreso = siguiente.getId_ingreso();
 
-        // Crear registro de consulta con el médico asignado
-        Consulta c = new Consulta();
-        c.setId_ingreso(siguiente.getId_ingreso());
-        c.setId_medico(medicoElegido.getId_medico());
-        c.setHora_inicio(java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-        c.setHora_fin("");
-        c.setObservaciones("");
-        consultaCRUD.insert(c);
-
-        cargarTabla();
+                // 3. Ejecutar DB en background
+                LoaderOverlay.runAsync(tablaCola,
+                    () -> {
+                        if (!ingresoCRUD.updateEstado(idIngreso, 2)) return false;
+                        Consulta c = new Consulta();
+                        c.setId_ingreso(idIngreso);
+                        c.setId_medico(medicoFinal.getId_medico());
+                        c.setHora_inicio(java.time.LocalDateTime.now().format(
+                            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                        c.setHora_fin("");
+                        c.setObservaciones("");
+                        consultaCRUD.insert(c);
+                        return true;
+                    },
+                    ok -> {
+                        if (!ok) alerta("Error", "No se pudo actualizar el estado del paciente.");
+                        cargarTabla();
+                    }
+                );
+            }
+        );
     }
 
     /** Muestra un diálogo con ComboBox para elegir el médico disponible. */
@@ -261,28 +299,44 @@ public class ColaRegistroController implements Initializable {
         IngresoDetalle sel = tablaCola.getSelectionModel().getSelectedItem();
         if (sel == null) { alerta("Sin selección", "Selecciona un paciente."); return; }
 
-        List<Estado> estados = estadoCRUD.getAll();
-        List<String> nombres = estados.stream().map(Estado::getNombre).collect(Collectors.toList());
-
-        ChoiceDialog<String> dialog = new ChoiceDialog<>(nombres.get(0), nombres);
-        dialog.setTitle("Actualizar estado");
-        dialog.setHeaderText("Paciente: " + sel.getNombre_paciente());
-        dialog.setContentText("Nuevo estado:");
-        dialog.showAndWait().ifPresent(elegido -> {
-            Estado e = estados.stream()
-                .filter(x -> x.getNombre().equals(elegido))
-                .findFirst().orElse(null);
-            if (e != null && ingresoCRUD.updateEstado(sel.getId_ingreso(), e.getId_estado()))
-                cargarTabla();
-        });
+        // 1. Fetch estados en background
+        LoaderOverlay.runAsync(tablaCola,
+            () -> estadoCRUD.getAll(),
+            estados -> {
+                // 2. Mostrar diálogo en hilo JavaFX
+                List<String> nombres = estados.stream().map(Estado::getNombre).collect(Collectors.toList());
+                ChoiceDialog<String> dialog = new ChoiceDialog<>(nombres.get(0), nombres);
+                dialog.setTitle("Actualizar estado");
+                dialog.setHeaderText("Paciente: " + sel.getNombre_paciente());
+                dialog.setContentText("Nuevo estado:");
+                dialog.showAndWait().ifPresent(elegido -> {
+                    Estado e = estados.stream()
+                        .filter(x -> x.getNombre().equals(elegido))
+                        .findFirst().orElse(null);
+                    if (e != null) {
+                        final int idEstado = e.getId_estado();
+                        // 3. Actualizar en background
+                        LoaderOverlay.runAsync(tablaCola,
+                            () -> ingresoCRUD.updateEstado(sel.getId_ingreso(), idEstado),
+                            ok -> { if (ok) cargarTabla(); }
+                        );
+                    }
+                });
+            }
+        );
     }
 
     @FXML
     private void handleEliminar() {
         IngresoDetalle sel = tablaCola.getSelectionModel().getSelectedItem();
         if (sel == null) { alerta("Sin selección", "Selecciona un paciente."); return; }
-        if (ingresoCRUD.delete(sel.getId_ingreso())) cargarTabla();
-        else alerta("Error", "No se pudo eliminar el ingreso.");
+        LoaderOverlay.runAsync(tablaCola,
+            () -> ingresoCRUD.delete(sel.getId_ingreso()),
+            ok -> {
+                if (ok) cargarTabla();
+                else alerta("Error", "No se pudo eliminar el ingreso.");
+            }
+        );
     }
 
     // ════════════════════════════════════════════════════════════════════════

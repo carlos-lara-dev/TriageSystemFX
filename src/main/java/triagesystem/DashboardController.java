@@ -46,7 +46,9 @@ public class DashboardController implements Initializable {
         lblFecha.setText("Resumen del día — " +
             LocalDate.now().format(DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy", new Locale("es"))));
         configurarColumnas();
-        cargarDatos();
+        // Platform.runLater garantiza que el nodo ya está en la escena
+        // y que LoaderOverlay puede encontrar el StackPane raíz
+        javafx.application.Platform.runLater(this::cargarDatos);
     }
 
     private void configurarColumnas() {
@@ -94,23 +96,35 @@ public class DashboardController implements Initializable {
 
     @FXML
     public void cargarDatos() {
-        List<IngresoDetalle> todos = ingresoCRUD.getAllDetalle();
+        LoaderOverlay.runAsync(tablaProximos,
+            () -> {
+                List<IngresoDetalle> todos = ingresoCRUD.getAllDetalle();
+                String hoy = LocalDate.now().toString();
+                int atendidos = reporteCRUD.getTotalAtendidos(hoy, hoy);
+                return new Object[]{ todos, atendidos };
+            },
+            result -> {
+                @SuppressWarnings("unchecked")
+                List<IngresoDetalle> todos = (List<IngresoDetalle>) result[0];
+                int atendidos = (int) result[1];
 
-        long enEspera   = todos.stream().filter(i -> i.getId_estado() == 1).count();
-        long enConsulta = todos.stream().filter(i -> i.getId_estado() == 2).count();
-        long criticos   = todos.stream().filter(i -> i.getNombre_prioridad().equalsIgnoreCase("Critical")).count();
+                long enEspera   = todos.stream().filter(i -> i.getId_estado() == 1).count();
+                long enConsulta = todos.stream().filter(i -> i.getId_estado() == 2).count();
+                long criticos   = todos.stream().filter(i ->
+                    i.getNombre_prioridad().equalsIgnoreCase("Critical")).count();
 
-        lblEnEspera.setText(String.valueOf(enEspera));
-        lblEnConsulta.setText(String.valueOf(enConsulta));
-        lblCriticos.setText(String.valueOf(criticos));
-        String hoy = LocalDate.now().toString();
-        lblAtendidos.setText(String.valueOf(reporteCRUD.getTotalAtendidos(hoy, hoy)));
+                lblEnEspera.setText(String.valueOf(enEspera));
+                lblEnConsulta.setText(String.valueOf(enConsulta));
+                lblCriticos.setText(String.valueOf(criticos));
+                lblAtendidos.setText(String.valueOf(atendidos));
 
-        List<IngresoDetalle> proximos = todos.stream()
-            .filter(i -> i.getId_estado() == 1)
-            .limit(5)
-            .collect(Collectors.toList());
-        tablaProximos.setItems(FXCollections.observableArrayList(proximos));
+                List<IngresoDetalle> proximos = todos.stream()
+                    .filter(i -> i.getId_estado() == 1)
+                    .limit(5)
+                    .collect(Collectors.toList());
+                tablaProximos.setItems(FXCollections.observableArrayList(proximos));
+            }
+        );
     }
 
     @FXML

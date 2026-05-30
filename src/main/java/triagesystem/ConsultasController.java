@@ -52,7 +52,6 @@ public class ConsultasController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         configurarColumnas();
-        cargarCola();
 
         tablaCola.getSelectionModel().selectedItemProperty().addListener(
             (obs, old, nuevo) -> {
@@ -60,7 +59,10 @@ public class ConsultasController implements Initializable {
             });
 
         mostrarEstado(false, false);
-        restaurarConsultaActiva();
+        javafx.application.Platform.runLater(() -> {
+            cargarCola();
+            restaurarConsultaActiva();
+        });
     }
 
     /** Si el médico ya tenía una consulta en curso al iniciar sesión, restaura el Estado C. */
@@ -69,25 +71,30 @@ public class ConsultasController implements Initializable {
                                Sesion.getUsuarioActual().getId_usuario());
         if (idMedico == null) return;
 
-        Consulta activa = consultaCRUD.getConsultaActivaPorMedico(idMedico);
-        if (activa == null) return;
-
-        // Buscar el IngresoDetalle del ingreso en curso (está "En consulta", no "En espera")
-        IngresoDetalle detalle = ingresoCRUD.getAllDetalle().stream()
-            .filter(d -> d.getId_ingreso().equals(activa.getId_ingreso()))
-            .findFirst().orElse(null);
-        if (detalle == null) return;
-
-        consultaActiva = activa;
-        // Rellenar el panel de detalle con los datos del paciente
-        lblNombrePaciente.setText(detalle.getNombre_paciente());
-        lblDpi.setText("DPI: " + detalle.getDpi());
-        lblPrioridad.setText("Prioridad: " + detalle.getNombre_prioridad());
-        lblSintomas.setText(detalle.getSintomas() != null ? detalle.getSintomas() : "—");
-        // Restaurar observaciones previas si las había
-        txtObservaciones.setText(activa.getObservaciones() != null ? activa.getObservaciones() : "");
-        seleccionado = detalle;
-        mostrarEstado(true, true); // Estado C: consulta en curso
+        LoaderOverlay.runAsync(tablaCola,
+            () -> {
+                Consulta activa = consultaCRUD.getConsultaActivaPorMedico(idMedico);
+                if (activa == null) return null;
+                IngresoDetalle detalle = ingresoCRUD.getAllDetalle().stream()
+                    .filter(d -> d.getId_ingreso().equals(activa.getId_ingreso()))
+                    .findFirst().orElse(null);
+                return new Object[]{ activa, detalle };
+            },
+            result -> {
+                if (result == null) return;
+                Consulta       activa  = (Consulta)       result[0];
+                IngresoDetalle detalle = (IngresoDetalle) result[1];
+                if (detalle == null) return;
+                consultaActiva = activa;
+                lblNombrePaciente.setText(detalle.getNombre_paciente());
+                lblDpi.setText("DPI: " + detalle.getDpi());
+                lblPrioridad.setText("Prioridad: " + detalle.getNombre_prioridad());
+                lblSintomas.setText(detalle.getSintomas() != null ? detalle.getSintomas() : "—");
+                txtObservaciones.setText(activa.getObservaciones() != null ? activa.getObservaciones() : "");
+                seleccionado = detalle;
+                mostrarEstado(true, true);
+            }
+        );
     }
 
     private void configurarColumnas() {
@@ -133,17 +140,19 @@ public class ConsultasController implements Initializable {
 
     @FXML
     public void cargarCola() {
-        Integer idMedico = usuarioMedicoCRUD.getIdMedicoPorUsuario(
-                               Sesion.getUsuarioActual().getId_usuario());
-        List<IngresoDetalle> activos = ingresoCRUD.getAllDetalle().stream()
-            .filter(i -> {
-                int estado = i.getId_estado() == null ? 0 : i.getId_estado();
-                if (estado == 1) return true;
-                if (estado == 2) return idMedico != null && idMedico.equals(i.getIdMedicoConsulta());
-                return false;
-            })
-            .collect(Collectors.toList());
-        tablaCola.setItems(FXCollections.observableArrayList(activos));
+        final Integer idMedico = usuarioMedicoCRUD.getIdMedicoPorUsuario(
+                                     Sesion.getUsuarioActual().getId_usuario());
+        LoaderOverlay.runAsync(tablaCola,
+            () -> ingresoCRUD.getAllDetalle().stream()
+                .filter(i -> {
+                    int estado = i.getId_estado() == null ? 0 : i.getId_estado();
+                    if (estado == 1) return true;
+                    if (estado == 2) return idMedico != null && idMedico.equals(i.getIdMedicoConsulta());
+                    return false;
+                })
+                .collect(Collectors.toList()),
+            activos -> tablaCola.setItems(FXCollections.observableArrayList(activos))
+        );
     }
 
     private void mostrarDetalle(IngresoDetalle d) {
@@ -185,34 +194,50 @@ public class ConsultasController implements Initializable {
             return;
         }
 
-        // Verificar que el ingreso sigue en espera antes de crear la consulta
-        List<IngresoDetalle> actual = ingresoCRUD.getAllDetalle().stream()
-            .filter(i -> i.getId_ingreso().equals(seleccionado.getId_ingreso()))
-            .collect(Collectors.toList());
-        if (actual.isEmpty() || actual.get(0).getId_estado() != 1) {
-            alerta("Paciente no disponible",
-                   "Este paciente ya está siendo atendido por otro médico.\nLa lista ha sido actualizada.");
-            cargarCola();
-            mostrarEstado(false, false);
-            tablaCola.getSelectionModel().clearSelection();
-            return;
-        }
+        final IngresoDetalle paciente = seleccionado;
+        final int idMed = idMedico;
 
-        Consulta c = new Consulta();
-        c.setId_ingreso(seleccionado.getId_ingreso());
-        c.setId_medico(idMedico);
-        c.setHora_inicio(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-        c.setHora_fin(null);
-        c.setObservaciones("");
+        LoaderOverlay.runAsync(tablaCola,
+            () -> {
+                // Verificar que el ingreso sigue en espera
+                List<IngresoDetalle> actual = ingresoCRUD.getAllDetalle().stream()
+                    .filter(i -> i.getId_ingreso().equals(paciente.getId_ingreso()))
+                    .collect(Collectors.toList());
+                if (actual.isEmpty() || actual.get(0).getId_estado() != 1)
+                    return new Object[]{ "no_disponible", null };
 
-        if (!consultaCRUD.insert(c)) { alerta("Error", "No se pudo iniciar la consulta."); return; }
-        ingresoCRUD.updateEstado(seleccionado.getId_ingreso(), 2);
+                Consulta c = new Consulta();
+                c.setId_ingreso(paciente.getId_ingreso());
+                c.setId_medico(idMed);
+                c.setHora_inicio(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                c.setHora_fin(null);
+                c.setObservaciones("");
+                if (!consultaCRUD.insert(c)) return new Object[]{ "error", null };
+                ingresoCRUD.updateEstado(paciente.getId_ingreso(), 2);
 
-        List<Consulta> consultas = consultaCRUD.getByIngreso(seleccionado.getId_ingreso());
-        if (!consultas.isEmpty()) consultaActiva = consultas.get(consultas.size() - 1);
-
-        cargarCola();
-        mostrarEstado(true, true);
+                List<Consulta> consultas = consultaCRUD.getByIngreso(paciente.getId_ingreso());
+                Consulta ultima = consultas.isEmpty() ? null : consultas.get(consultas.size() - 1);
+                return new Object[]{ "ok", ultima };
+            },
+            result -> {
+                String status = (String) result[0];
+                switch (status) {
+                    case "no_disponible" -> {
+                        alerta("Paciente no disponible",
+                               "Este paciente ya está siendo atendido por otro médico.\nLa lista ha sido actualizada.");
+                        cargarCola();
+                        mostrarEstado(false, false);
+                        tablaCola.getSelectionModel().clearSelection();
+                    }
+                    case "error" -> alerta("Error", "No se pudo iniciar la consulta.");
+                    case "ok" -> {
+                        consultaActiva = (Consulta) result[1];
+                        cargarCola();
+                        mostrarEstado(true, true);
+                    }
+                }
+            }
+        );
     }
 
     private void finalizarConsulta() {
@@ -222,15 +247,25 @@ public class ConsultasController implements Initializable {
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         consultaActiva.setObservaciones(txtObservaciones.getText().trim());
 
-        if (!consultaCRUD.update(consultaActiva)) { alerta("Error", "No se pudo finalizar la consulta."); return; }
-        ingresoCRUD.updateEstado(seleccionado.getId_ingreso(), 3); // 3 = Atendido
+        final Consulta consulta    = consultaActiva;
+        final int      idIngreso   = seleccionado.getId_ingreso();
 
-        consultaActiva = null;
-        seleccionado   = null;
-        txtObservaciones.clear();
-        cargarCola();
-        mostrarEstado(false, false);
-        tablaCola.getSelectionModel().clearSelection();
+        LoaderOverlay.runAsync(tablaCola,
+            () -> {
+                if (!consultaCRUD.update(consulta)) return false;
+                ingresoCRUD.updateEstado(idIngreso, 3);
+                return true;
+            },
+            ok -> {
+                if (!ok) { alerta("Error", "No se pudo finalizar la consulta."); return; }
+                consultaActiva = null;
+                seleccionado   = null;
+                txtObservaciones.clear();
+                cargarCola();
+                mostrarEstado(false, false);
+                tablaCola.getSelectionModel().clearSelection();
+            }
+        );
     }
 
     private void alerta(String t, String m) {
